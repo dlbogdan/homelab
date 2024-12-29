@@ -44,6 +44,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    env_file:
+      - config.env
+      - ../general/setup.env
 
   guacd:
     image: guacamole/guacd:1.5.5
@@ -83,6 +86,9 @@ services:
       - guacamole-config:/config
     networks:
       - guacamole-net
+    env_file:
+      - config.env
+      - ../general/setup.env
 
 volumes:
   guacamole-mysql-data:
