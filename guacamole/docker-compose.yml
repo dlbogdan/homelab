@@ -29,10 +29,10 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-guac_db}
-      MYSQL_USER: ${MYSQL_USER:-guac_dbuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      #MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      #MYSQL_DATABASE: ${MYSQL_DATABASE:-guac_db}
+      #MYSQL_USER: ${MYSQL_USER:-guac_dbuser}
+      #MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - guacamole-mysql-data:/var/lib/mysql
       - guacamole-mysql-init:/docker-entrypoint-initdb.d
@@ -65,15 +65,15 @@ services:
       GUACD_HOSTNAME: guacd
       MYSQL_HOSTNAME: mysql
       MYSQL_PORT: 3306
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-guac_db}
-      MYSQL_USER: ${MYSQL_USER:-guac_dbuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      LDAP_HOSTNAME: ${LDAP_HOSTNAME}
+      #MYSQL_DATABASE: ${MYSQL_DATABASE:-guac_db}
+      #MYSQL_USER: ${MYSQL_USER:-guac_dbuser}
+      #MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      #LDAP_HOSTNAME: ${LDAP_HOSTNAME}
       LDAP_PORT: 389
       LDAP_ENCRYPTION_METHOD: none
-      LDAP_USER_BASE_DN: ${LDAP_USER_BASE_DN}
-      LDAP_SEARCH_BIND_DN: ${LDAP_SEARCH_BIND_DN}
-      LDAP_SEARCH_BIND_PASSWORD: ${LDAP_SEARCH_BIND_PASSWORD}
+      #LDAP_USER_BASE_DN: ${LDAP_USER_BASE_DN}
+      #LDAP_SEARCH_BIND_DN: ${LDAP_SEARCH_BIND_DN}
+      #LDAP_SEARCH_BIND_PASSWORD: ${LDAP_SEARCH_BIND_PASSWORD}
       LDAP_USERNAME_ATTRIBUTE: ${LDAP_USERNAME_ATTRIBUTE:-sAMAccountName}
       MYSQL_AUTO_CREATE_ACCOUNTS: ${MYSQL_AUTO_CREATE_ACCOUNTS:-true}
       TOTP_ENABLED: ${TOTP_ENABLED:-true}
