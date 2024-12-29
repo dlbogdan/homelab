@@ -4,7 +4,7 @@ services:
   echo-service:
     image: alpine:latest
     command: >
-      sh -c 'echo "Var1: ${VAR1}, Var2: ${VAR2}, Var3: ${VAR3}"'
+      /bin/sh -c 'echo "Var1: $VAR1, Var2: $VAR2, Var3: $VAR3"'
     env_file:
       - env_file1.env
       - env_file2.env
