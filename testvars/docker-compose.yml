@@ -3,7 +3,8 @@ version: '3.9'
 services:
   echo-service:
     image: alpine:latest
-    command: echo "Var1: $VAR1"
+    command: >
+      echo "Var1: $VAR1"
     env_file:
       - env_file1.env
       - env_file2.env
