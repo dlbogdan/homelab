@@ -128,7 +128,7 @@
       command: ceph fs volume create cephfs
       register: create_fs_result
       changed_when: "'Error EEXIST: filesystem 'cephfs' already exists' not in create_fs_result.stderr"
-      failed_when: create_fs_result.rc != 0
+      failed_when: create_fs_result.rc != 0 and "'Error EEXIST: filesystem cephfs already exists' not in create_fs_result.stderr"
 
     - name: Create mount directory
       file:
