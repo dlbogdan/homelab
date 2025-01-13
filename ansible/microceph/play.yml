@@ -143,25 +143,17 @@
         path: /etc/ceph
         state: directory
   
-    - name: bind mount fstab microceph conf to /etc/ceph
-      lineinfile:
-        path: /etc/fstab
-        line: "/var/snap/microceph/current/conf /etc/ceph none bind 0 0"  
-        state: present
-    - name: Update fstab entry for CephFS
-      lineinfile:
-        path: /etc/fstab
-        line: "none /mnt/cephfs fuse.ceph ceph.id=admin,ceph.conf=/etc/ceph/ceph.conf,_netdev 0 0"
-        state: present
-    - name: reload systemctl daemon
-      command: systemctl daemon-reload
-    - name: Mount all filesystems in /etc/fstab
-      command: mount -a 
-      register: mount_result
-      changed_when: false
-      failed_when: mount_result.rc != 0
-    - name: Verify CephFS mount
-      command: df -h | grep cephfs
-      register: df_result
-      changed_when: false
-      failed_when: df_result.rc != 0
+    - name: Bind mount microceph conf to /etc/ceph
+      ansible.posix.mount:
+        src: /var/snap/microceph/current/conf
+        path: /etc/ceph
+        fstype: none
+        opts: bind
+        state: mounted
+    - name: Mount CephFS using ceph-fuse
+      ansible.posix.mount:
+        src: none
+        path: /mnt/cephfs
+        fstype: fuse.ceph
+        opts: ceph.id=admin,ceph.conf=/etc/ceph/ceph.conf,_netdev
+        state: mounted
