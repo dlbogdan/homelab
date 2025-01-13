@@ -99,6 +99,35 @@
       failed_when: >
         join_result.rc != 0
         and ('Database is online' not in join_result.stderr)
+      ignore_errors: true
+- name: Check if join failed due to existing remote address
+      debug:
+        msg: "Join failed due to existing remote address"
+      when: join_result.stderr is search("Remote with address")
+- name: Get node name from cluster list
+      command: microceph cluster list | grep {{ inventory_hostname }}
+      register: cluster_list_result
+      when: join_result.stderr is search("Remote with address")
+
+- name: Extract node name
+  set_fact:
+    node_name: "{{ cluster_list_result.stdout.split('|')[1].strip() }}"
+  when: join_result.stderr is search("Remote with address")
+
+- name: Remove node from cluster
+  command: microceph cluster remove {{ node_name }} -f
+  when: join_result.stderr is search("Remote with address")    
+- name: Retry joining the cluster
+      command: microceph cluster join "{{ hostvars[groups['mon'][0]].join_tokens[ play_hosts.index(inventory_hostname) ] }}"
+      register: retry_join_result
+      when: join_result.stderr is search("Remote with address")
+      retries: 3
+      delay: 5
+      until: retry_join_result.rc == 0 or 'Database is online' in retry_join_result.stderr
+      changed_when: true
+      failed_when: >
+        retry_join_result.rc != 0
+        and ('Database is online' not in retry_join_res
 
 - name: Add disks to the cluster
   hosts: all
