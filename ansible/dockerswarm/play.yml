@@ -1,0 +1,65 @@
+---
+- name: Deploy Docker Swarm Cluster
+  hosts: all
+  become: yes
+  vars:
+    manager_token: ""
+    worker_token: ""
+    swarm_initialized: false
+
+  tasks:
+    - name: Install Docker
+      ansible.builtin.package:
+        name:
+          - docker.io
+        state: present
+
+    - name: Start Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Initialize Swarm on first manager
+      when: inventory_hostname == groups['managers'][0]
+      command: "docker swarm init"
+      register: init_output
+      failed_when: "'This node is already part of a swarm' not in init_output.stderr and init_output.rc != 0"
+      changed_when: "'Swarm initialized' in init_output.stdout"
+
+    - name: Retrieve worker token
+      when: inventory_hostname == groups['managers'][0]
+      shell: "docker swarm join-token worker | grep -o 'SWMTKN[^ ]*'"
+      register: worker_token_result
+
+    - name: Retrieve manager token
+      when: inventory_hostname == groups['managers'][0]
+      shell: "docker swarm join-token manager | grep -o 'SWMTKN[^ ]*'"
+      register: manager_token_result
+
+    - name: Set tokens
+      when: inventory_hostname != groups['managers'][0]
+      set_fact:
+        worker_token: "{{ hostvars[groups['managers'][0]].worker_token_result.stdout }}"
+        manager_token: "{{ hostvars[groups['managers'][0]].manager_token_result.stdout }}"
+
+    - name: Join worker nodes to swarm
+      when: "'workers' in groups and inventory_hostname in groups['workers']"
+      command: "docker swarm join --token {{ worker_token }} {{ hostvars[groups['managers'][0]].ansible_host }}:2377"
+      register: join_result
+      failed_when: "'This node is already part of a swarm' not in join_result.stderr and join_result.rc != 0"
+      changed_when: "'This node joined a swarm as a worker' in join_result.stdout"
+
+    - name: Join additional manager nodes to swarm
+      when: inventory_hostname in groups['managers'] and inventory_hostname != groups['managers'][0]
+      command: "docker swarm join --token {{ manager_token }} {{ hostvars[groups['managers'][0]].ansible_host }}:2377"
+      register: join_manager_result
+      failed_when: "'This node is already part of a swarm' not in join_manager_result.stderr and join_manager_result.rc != 0"
+      changed_when: "'This node joined a swarm as a manager' in join_manager_result.stdout"
+
+    - name: Deploy universal volume plugin
+      command: "docker plugin install --grant-all-permissions dlbogdan/universal-volume:latest"
+      register: plugin_result
+      failed_when: "'Error response from daemon: plugin dlbogdan/universal-volume:latest already exists' not in plugin_result.stderr and plugin_result.rc != 0"
+      changed_when: "'plugin dlbogdan/universal-volume:latest installed' in plugin_result.stdout"
+

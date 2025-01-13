@@ -1,0 +1,117 @@
+---
+- name: Deploy CephFS with MicroCeph
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure snapd is installed
+      apt:
+        name: snapd
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install MicroCeph
+      community.general.snap:
+        name: microceph
+        state: present
+
+    - name: Hold MicroCeph version to prevent updates
+      command: snap refresh --hold microceph
+
+- name: Bootstrap and configure the cluster
+  hosts: mon
+  become: yes
+
+  vars:
+    # We'll accumulate join tokens for all worker nodes here
+    join_tokens_list: []
+
+  tasks:
+    - name: Bootstrap the MicroCeph cluster
+      command: microceph cluster bootstrap
+      register: bootstrap_result
+      changed_when: "'already bootstrapped' not in bootstrap_result.stdout"
+      failed_when: >
+        bootstrap_result.rc != 0
+        and ('Database is online' not in bootstrap_result.stderr)
+
+    - name: Attempt to add all MicroCeph nodes to cluster (ignore errors)
+      command: microceph cluster add {{ hostvars[item].ansible_hostname }}
+      loop: "{{ groups['microceph_nodes'] }}"
+      ignore_errors: true
+      register: add_results
+
+    - name: Remove leftover token record (only for nodes failing with UNIQUE constraint)
+      command: microceph cluster sql "DELETE FROM core_token_records WHERE name='{{ item }}';"
+      loop: "{{ add_results.results 
+                | selectattr('rc', 'eq', 1)
+                | selectattr('stderr','search','UNIQUE constraint failed')
+                | map(attribute='item')
+                | list }}"
+      register: token_cleanup
+      # If the above loop is empty, this task simply skips.
+
+    - name: Retry adding those same nodes after cleanup
+      command: microceph cluster add {{ item }}
+      loop: "{{ token_cleanup.results | map(attribute='item') | list }}"
+      register: readd_results
+      failed_when: readd_results is failed
+
+    - name: Combine all tokens into one list
+      set_fact:
+        join_tokens_list: >-
+          {{
+            join_tokens_list
+            + (
+              add_results.results 
+              | selectattr('rc','eq',0) 
+              | map(attribute='stdout')
+              | list
+            )
+            + (
+              readd_results.results | default([]) 
+              | selectattr('rc','eq',0) 
+              | map(attribute='stdout') 
+              | list
+            )
+          }}
+
+    - name: Expose final join_tokens
+      set_fact:
+        join_tokens: "{{ join_tokens_list }}"
+
+- name: Join nodes to the cluster
+  hosts: microceph_nodes
+  become: yes
+  tasks:
+    - name: Join the cluster with the token
+      command: microceph cluster join "{{ hostvars[groups['mon'][0]].join_tokens[ play_hosts.index(inventory_hostname) ] }}"
+      register: join_result
+      retries: 3
+      delay: 5
+      until: join_result.rc == 0 or 'Database is online' in join_result.stderr
+      changed_when: true
+      failed_when: >
+        join_result.rc != 0
+        and ('Database is online' not in join_result.stderr)
+
+- name: Add disks to the cluster
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add disk to the cluster
+      command: microceph disk add {{ disk }} --wipe
+      register: add_disk_result
+      changed_when: true
+      failed_when: >
+        add_disk_result.rc != 0
+        and ("entry already exists" not in add_disk_result.stderr)
+
+- name: Verify cluster - namestatus
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check MicroCeph cluster status
+      command: ceph status
+      register: status_result
+      changed_when: false
+      failed_when: "'health: HEALTH_OK' not in status_result.stdout"
