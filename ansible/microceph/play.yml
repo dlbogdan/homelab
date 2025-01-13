@@ -7,6 +7,7 @@
       apt:
         name: snapd
         state: present
+        update_cache: yes
       when: ansible_distribution == "Ubuntu"
 
     - name: Ensure ceph-fuse is installed
@@ -119,6 +120,9 @@
       command: ceph status
       register: status_result
       changed_when: false
+      retries: 3
+      delay: 5
+      until: "'health: HEALTH_OK' in status_result.stdout"
       failed_when: "'health: HEALTH_OK' not in status_result.stdout"
 - name: Create and mount CephFS
   hosts: all
