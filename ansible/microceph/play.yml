@@ -2,6 +2,8 @@
 - name: Deploy CephFS with MicroCeph
   hosts: all
   become: yes
+  vars:
+    cephfs_mount_path: /mnt/univol
   tasks:
     - name: Ensure snapd is installed
       apt:
@@ -136,7 +138,7 @@
 
     - name: Create mount directory
       file:
-        path: /mnt/cephfs
+        path: "{{ cephfs_mount_path }}"
         state: directory
     - name: Create bind mountpoint for /etc/ceph
       file:
@@ -153,7 +155,7 @@
     - name: Mount CephFS using ceph-fuse
       ansible.posix.mount:
         src: none
-        path: /mnt/cephfs
+        path: "{{ cephfs_mount_path }}"
         fstype: fuse.ceph
         opts: ceph.id=admin,ceph.conf=/etc/ceph/ceph.conf,_netdev
         state: mounted
