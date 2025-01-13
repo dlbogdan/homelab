@@ -133,7 +133,8 @@
       register: create_fs_result
       changed_when: "'Error EEXIST' not in create_fs_result.stderr"
       failed_when: "'Error EEXIST' not in create_fs_result.stderr and create_fs_result.rc != 0"
-
+      run_once: true
+      
     - name: Create mount directory
       file:
         path: /mnt/univol
