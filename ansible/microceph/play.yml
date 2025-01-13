@@ -1,9 +1,9 @@
 ---
+  vars:
+    cephfs_mount_path: /mnt/univol
 - name: Deploy CephFS with MicroCeph
   hosts: all
   become: yes
-  vars:
-    cephfs_mount_path: /mnt/univol
   tasks:
     - name: Ensure snapd is installed
       apt:
