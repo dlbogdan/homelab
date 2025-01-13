@@ -1,6 +1,7 @@
 ---
-  vars:
-    cephfs_mount_path: /mnt/univol
+vars:
+  cephfs_mount_path: /mnt/univol
+
 - name: Deploy CephFS with MicroCeph
   hosts: all
   become: yes
@@ -28,11 +29,8 @@
 - name: Bootstrap and configure the cluster
   hosts: mon
   become: yes
-
   vars:
-    # We'll accumulate join tokens for all worker nodes here
     join_tokens_list: []
-
   tasks:
     - name: Bootstrap the MicroCeph cluster
       command: microceph cluster bootstrap
@@ -50,13 +48,12 @@
 
     - name: Remove leftover token record (only for nodes failing with UNIQUE constraint)
       command: microceph cluster sql "DELETE FROM core_token_records WHERE name='{{ item }}';"
-      loop: "{{ add_results.results 
+      loop: "{{ add_results.results
                 | selectattr('rc', 'eq', 1)
-                | selectattr('stderr','search','UNIQUE constraint failed')
+                | selectattr('stderr', 'search', 'UNIQUE constraint failed')
                 | map(attribute='item')
                 | list }}"
       register: token_cleanup
-      # If the above loop is empty, this task simply skips.
 
     - name: Retry adding those same nodes after cleanup
       command: microceph cluster add {{ item }}
@@ -70,15 +67,15 @@
           {{
             join_tokens_list
             + (
-              add_results.results 
-              | selectattr('rc','eq',0) 
+              add_results.results
+              | selectattr('rc', 'eq', 0)
               | map(attribute='stdout')
               | list
             )
             + (
-              readd_results.results | default([]) 
-              | selectattr('rc','eq',0) 
-              | map(attribute='stdout') 
+              readd_results.results | default([])
+              | selectattr('rc', 'eq', 0)
+              | map(attribute='stdout')
               | list
             )
           }}
@@ -126,6 +123,7 @@
       delay: 5
       until: "'health: HEALTH_OK' in status_result.stdout"
       failed_when: "'health: HEALTH_OK' not in status_result.stdout"
+
 - name: Create and mount CephFS
   hosts: all
   become: yes
@@ -140,11 +138,12 @@
       file:
         path: "{{ cephfs_mount_path }}"
         state: directory
+
     - name: Create bind mountpoint for /etc/ceph
       file:
         path: /etc/ceph
         state: directory
-  
+
     - name: Bind mount microceph conf to /etc/ceph
       ansible.posix.mount:
         src: /var/snap/microceph/current/conf
@@ -152,6 +151,7 @@
         fstype: none
         opts: bind
         state: mounted
+
     - name: Mount CephFS using ceph-fuse
       ansible.posix.mount:
         src: none
