@@ -134,6 +134,11 @@
       file:
         path: /mnt/cephfs
         state: directory
+    - name: Create bind mountpoint for /etc/ceph
+      file:
+        path: /etc/ceph
+        state: directory
+  
     - name: bind mount fstab microceph conf to /etc/ceph
       lineinfile:
         path: /etc/fstab
