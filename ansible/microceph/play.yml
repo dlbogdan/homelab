@@ -107,10 +107,12 @@
     - name: Add disk to the cluster
       command: microceph disk add {{ disk }} --wipe
       register: add_disk_result
-      changed_when: true
+      changed_when: >
+        add_disk_result.rc == 0
+        and ('already exists' not in add_disk_result.stderr)
       failed_when: >
         add_disk_result.rc != 0
-        and ("entry already exists" not in add_disk_result.stderr)
+        and ("already exists" not in add_disk_result.stderr)
 
 - name: Verify cluster - namestatus
   hosts: all
