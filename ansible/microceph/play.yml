@@ -121,14 +121,14 @@
       changed_when: false
       failed_when: "'health: HEALTH_OK' not in status_result.stdout"
 - name: Create and mount CephFS
-  hosts: mon
+  hosts: all
   become: yes
   tasks:
     - name: Create CephFS
       command: ceph fs volume create cephfs
       register: create_fs_result
       changed_when: "'Error EEXIST: filesystem \\'cephfs\\' already exists' not in create_fs_result.stderr"
-      failed_when: "'Error EEXIST: filesystem \\'cephfs\\' already exists' not in create_fs_result.stderr" and create_fs_result.rc != 0
+      failed_when: "'Error EEXIST: filesystem \\'cephfs\\' already exists' not in create_fs_result.stderr and create_fs_result.rc != 0"
 
     - name: Create mount directory
       file:
