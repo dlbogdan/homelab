@@ -131,8 +131,8 @@
     - name: Create CephFS
       command: ceph fs volume create cephfs
       register: create_fs_result
-      changed_when: "'Error EEXIST: filesystem \\'cephfs\\' already exists' not in create_fs_result.stderr"
-      failed_when: "'Error EEXIST: filesystem \\'cephfs\\' already exists' not in create_fs_result.stderr and create_fs_result.rc != 0"
+      changed_when: "'Error EEXIST' not in create_fs_result.stderr"
+      failed_when: "'Error EEXIST' not in create_fs_result.stderr and create_fs_result.rc != 0"
 
     - name: Create mount directory
       file:
@@ -153,3 +153,11 @@
         path: /etc/fstab
         line: "none /mnt/cephfs fuse.ceph ceph.id=admin,ceph.conf=/etc/ceph/ceph.conf,_netdev 0 0"
         state: present
+    - name: Mount CephFS
+      command: mount /mnt/cephfs
+      register: mount_result
+      changed_when: false
+      retries: 3
+      delay: 5
+      until: mount_result.rc == 0
+      failed_when: mount_result.rc != 0
